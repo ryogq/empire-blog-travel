@@ -1,0 +1,40 @@
+name: Sleep Tech Auto-Blogger
+
+on:
+  schedule:
+    # 毎日UTC 00:00 (日本時間 朝 9:00) に自動実行（他のブログと重ならないように調整）
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 手動実行も許可
+
+jobs:
+  run-sentinel:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+      
+      - name: Node.js のセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: 依存関係のインストール
+        working-directory: ./ai-sentinel
+        run: npm install
+      
+      - name: 🤖 AI Sentinel 実行
+        working-directory: ./ai-sentinel
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: npx tsx src/index.ts
+      
+      - name: 📝 できた記事をGitHubへ自動保存
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-post: Sleep Tech & Body Care - Today's Summary"
+          file_pattern: "src/content/blog/*.md ai-sentinel/db.json"
+          push_options: '--force'
